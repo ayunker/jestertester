@@ -1,35 +1,57 @@
-# Next.js + Jest
+# JesterTester
 
-This example shows how to configure Jest to work with Next.js.
+This is a sample repo to illustrate and debug issues running jest tests with next.js
 
-This includes Next.js' built-in support for Global CSS, CSS Modules and TypeScript. This example also shows how to use Jest with the App Router and React Server Components.
+This is possibly/probably user error, but took a long time to figure out.
 
-> **Note:** Since tests can be co-located alongside other files inside the App Router, we have placed those tests in `app/` to demonstrate this behavior (which is different than `pages/`). You can still place all tests in `__tests__` if you prefer.
+## Setup
 
-## Deploy your own
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/next.js/tree/canary/examples/with-jest&project-name=with-jest&repository-name=with-jest)
-
-## How to Use
-
-Quickly get started using [Create Next App](https://github.com/vercel/next.js/tree/canary/packages/create-next-app#readme)!
-
-In your terminal, run the following command:
+This repo was initialized with `create-next-app` using the `with-jest` option with current Next.js version (14.0.1).
 
 ```bash
 npx create-next-app --example with-jest with-jest-app
 ```
 
-```bash
-yarn create next-app --example with-jest with-jest-app
+## Problem
+
+Let's add a dependency like `camelcase-keys`, and use it in a test file (`app/component.test.tx`).
+
+When we `npm run test`, we get this ugly import error.
+
+```
+Jest encountered an unexpected token
+
+Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+By default "node_modules" folder is ignored by transformers.
+
+Here's what you can do:
+ • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+ • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+ • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+ • If you need a custom transformation specify a "transform" option in your config.
+ • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+You'll find more details and examples of these config options in the docs:
+https://jestjs.io/docs/configuration
+For information about custom transformations, see:
+https://jestjs.io/docs/code-transformation
+
+Details:
+
+/Users/bear/src/tmp/nextjest/with-jest-app/node_modules/camelcase-keys/index.js:1
+({"Object.<anonymous>":function(module,exports,require,__dirname,__filename,jest){import mapObject from 'map-obj';
+                                                                                  ^^^^^^
+
+SyntaxError: Cannot use import statement outside a module
 ```
 
-```bash
-pnpm create next-app --example with-jest with-jest-app
-```
+I suppose steps in the error message might make more sense to the experienced typescripter (javascripter?), but took a while to click for me.
 
-## Running Tests
+So we need to add some modules (namely `camelcase-keys`) to `transformIgnorePatterns` in `jest.config.js`.
 
-```bash
-npm test
-```
+However, there's a catch! We can't just override the value in the config that's passed to Jest. Since we're configuring Jest through next, we need to ensure our override comes in after the next config. `createJestConfig` is an async function, so we need to `await` that, then layer in the `transformIgnorePatterns` on top of that.
+
+Would never have found that without [this clutch StackOverflow post](https://stackoverflow.com/a/75604417)
